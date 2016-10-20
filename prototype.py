@@ -10,6 +10,7 @@ class Cell:
     def __init__(self, row, col, replication_time = 10):
         self.replication_time = replication_time
         self.infected = False
+        self.dead = False
         self.attached_phage = 0
         self.age = 1
         self.row = row
@@ -55,6 +56,16 @@ class Plate:
         self.populate_cells()
         self.populate_phages()
 
+        self.phage_moves = {0: (0, 0),
+                            1: (0, 1),
+                            2: (0, -1),
+                            3: (1, 0),
+                            4: (-1, 0),
+                            5: (-1, 1),
+                            6: (1, 1),
+                            7: (1, -1),
+                            8: (-1, -1)}
+
     def populate_cells(self):
         # A matrix to track the number of cells in each patch
         self.cell_matrix = np.random.choice(
@@ -82,9 +93,11 @@ class Plate:
         # First iterate over Cells
         new_cells = []
         for cell in self.cell_list:
+            if cell.dead == True:
+                pass
             if cell.infected == True:
                 if cell.lysis_time == 0:
-                    cell.infected == False
+                    cell.dead = True
                     self.phage_matrix[cell.row, cell.col] += 40
                 else:
                     cell.lysis_time -= 1
@@ -117,11 +130,12 @@ class Plate:
             phage_count = self.phage_matrix[row, col]
             if cell_count > 0 and phage_count > 0:
                 self.infect_cell(row, col)
-
-
+                self.phage_matrix[row, col] -= 1
 
     def infect_cell(self, row, col):
         for cell in self.cell_list:
+            if cell.dead == True:
+                pass
             if cell.row == row and cell.col == col:
                 if cell.infected == False:
                     cell.infected = True
@@ -144,17 +158,7 @@ class Plate:
         """
         Convert a number between 1 and 9 to a set of relative coordinates.
         """
-        return {
-            0: (0, 0),
-            1: (0, 1),
-            2: (0, -1),
-            3: (1, 0),
-            4: (-1, 0),
-            5: (-1, 1),
-            6: (1, 1),
-            7: (1, -1),
-            8: (-1, -1)
-        }[num]
+        return self.phage_moves[num]
 
     def __str__(self):
         out = "Cell matrix: \n" + str(self.cell_matrix)
@@ -165,7 +169,7 @@ my_plate = Plate(20, 20, 0.1, 0.1, 3)
 
 print(my_plate)
 
-for i in range(100):
+for i in range(50):
     my_plate.iterate()
 
 print(my_plate)
