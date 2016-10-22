@@ -11,7 +11,6 @@ class Cell:
         self.replication_time = replication_time
         self.infected = False
         self.dead = False
-        self.attached_phage = 0
         self.age = 1
         self.row = row
         self.col = col
@@ -56,16 +55,6 @@ class Plate:
         self.populate_cells()
         self.populate_phages()
 
-        self.phage_moves = {0: (0, 0),
-                            1: (0, 1),
-                            2: (0, -1),
-                            3: (1, 0),
-                            4: (-1, 0),
-                            5: (-1, 1),
-                            6: (1, 1),
-                            7: (1, -1),
-                            8: (-1, -1)}
-
     def populate_cells(self):
         # A matrix to track the number of cells in each patch
         self.cell_matrix = np.random.choice(
@@ -89,8 +78,7 @@ class Plate:
             p = [1 - self.phage_fill, self.phage_fill]
         )
 
-    def iterate(self):
-        # First iterate over Cells
+    def sweep_cells(self):
         new_cells = []
         for cell in self.cell_list:
             if cell.dead == True:
@@ -112,23 +100,38 @@ class Plate:
                     cell.age = 1
         self.cell_list.extend(new_cells)
 
-        # Now iterate over phage matrix and diffuse phage
+    def diffuse_phage(self):
         new_phage_matrix = np.zeros([self.rows, self.cols], dtype='int')
         for row, col in np.ndindex(self.phage_matrix.shape):
-            for i in range(self.phage_matrix[row, col]):
-                move = self.to_coords(np.random.randint(9))
-                new_row = row + move[0]
-                new_col = col + move[1]
-                if new_row < self.rows and new_row >=0 and new_col < self.cols and new_col >= 0:
+            coords = np.random.normal(0,
+                                      0.5, [self.phage_matrix[row, col], 2]
+                                      ).round(0).astype(int)
+            infect = np.random.choice([0, 1, 2, 3]
+                                      [self.phage_matrix])
+            for coord in coords:
+                new_row = row + coord[0]
+                new_col = col + coord[1]
+                if self.check_boundary(new_row, new_col) == False:
                     new_phage_matrix[new_row, new_col] += 1
                 else:
                     new_phage_matrix[row, col] += 1
+                if time_until_infection < time_step:
+                    infect_cell
         self.phage_matrix = new_phage_matrix
+
+    def iterate(self):
+        # First iterate over Cells
+        self.sweep_cells()
+        self.diffuse_phage()
 
         for row, col in np.ndindex(self.phage_matrix.shape):
             cell_count = self.cell_matrix[row, col]
             phage_count = self.phage_matrix[row, col]
             if cell_count > 0 and phage_count > 0:
+                k = 0.1
+                rate = (k * phage_count * cell_count).round(0)
+                if rate == 0:
+                    pass
                 self.infect_cell(row, col)
                 self.phage_matrix[row, col] -= 1
 
@@ -148,24 +151,25 @@ class Plate:
         Returns True if a given set of coordinates extends outside of the plate
         or if a given patch has reached its maximum cell-carrying capacity.
         """
+        if self.check_boundary(row, col):
+            return True
+        elif self.cell_matrix[row, col] >= self.max_cell_density:
+            return True
+        else:
+            return False
+
+    def check_boundary(self, row, col):
         if row > self.rows - 1 or row < 0 or col > self.cols - 1 or col < 0:
             return True
-        if self.cell_matrix[row, col] >= self.max_cell_density:
-            return True
-        return False
-
-    def to_coords(self, num):
-        """
-        Convert a number between 1 and 9 to a set of relative coordinates.
-        """
-        return self.phage_moves[num]
+        else:
+            return False
 
     def __str__(self):
-        out = "Cell matrix: \n" + str(self.cell_matrix)
+        out = "Uninfected Cell matrix: \n" + str(self.cell_matrix)
         out += "\n\nPhage matrix: \n" +str(self.phage_matrix)
         return out
 
-my_plate = Plate(20, 20, 0.1, 0.1, 3)
+my_plate = Plate(10, 10, 0.1, 0.1, 3)
 
 print(my_plate)
 
