@@ -7,7 +7,8 @@ class Patch:
     A single patch in the simulation.
 
     Each patch in the simulation is treated as it's own set of reactions
-    executed using the gillespie algorithm. Reactions are executed until the next diffusion event, determined by the Plate class, occurs.
+    executed using the gillespie algorithm. Reactions are executed until the
+    next diffusion event, determined by the Plate class, occurs.
 
     Attributes:
         row: Plate row where this patch is located.
