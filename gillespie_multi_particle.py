@@ -11,6 +11,7 @@ class Patch:
         self.phages = phages
         self.infected_cells = 0
         self.replicated_cells = 0
+        self.goo = 5
         self.row = row
         self.col = col
         self.length = length
@@ -21,7 +22,9 @@ class Patch:
 
             # Calculate propensities for all reactions
             prop = np.array([0.3 * self.cells * self.phages,
-                             0.1 * self.infected_cells])
+                             0.1 * self.infected_cells,
+                             0.05 * self.cells,
+                             0.05 * self.goo * self.phages])
 
             # Find total propensity of the system
             prop_sum = prop.sum()
@@ -40,18 +43,23 @@ class Patch:
                 break
 
             # Randomly select next reaction to occur
-            next_reaction = np.random.multinomial(1, prop/prop_sum).nonzero()[0][0]
+            next_reaction = np.random.multinomial(1,
+                                                  prop/prop_sum).nonzero()[0][0]
             # Execute next reaction
             if next_reaction == 0:
                 self.infect_cell()
             elif next_reaction == 1:
                 self.burst_cell()
+            elif next_reaction == 2:
+                self.replicate_cell()
+            elif next_reaction == 3:
+                self.kill_phage()
 
-    def replicate_cells(self):
+    def replicate_cell(self):
         """
         Reaction 0
         """
-        pass
+        self.replicated_cells += 1
 
     def infect_cell(self):
         """
@@ -65,8 +73,11 @@ class Patch:
         """
         Reaction 2
         """
-        self.phages += 20
+        self.phages += 40
         self.infected_cells -= 1
+
+    def kill_phage(self):
+        self.phages -= 1
 
     def __str__(self):
         return "Phage: " + str(self.phages) + "\nCells: " + str(self.cells) + " " + str(self.time)
@@ -78,7 +89,9 @@ class Plate:
         self.cols = cols
         self.length = length
         self.phage_diffusion = 0.1
-        self.iter_num = 0
+        self.phage_iter = 1
+        self.cell_diffusion = 0.05
+        self.cell_iter = 1
         self.time = 0
         self.matrix = np.empty([rows, cols], dtype = object)
         for i in range(rows):
@@ -88,14 +101,24 @@ class Plate:
                 self.matrix[i][j] = Patch(i, j, length, cells, phages)
 
     def iterate(self):
-        dt = (1/4)*((self.length**2)/self.phage_diffusion)
-        self.time += dt
-        for i in range(self.rows):
-            for j in range(self.cols):
-                self.matrix[i][j].execute_until(self.time)
-                self.matrix[i][j].time = self.time
-        self.diffuse_phages()
-        self.iter_num += 1
+        dt_phage = (1/4)*((self.length**2)/self.phage_diffusion)*self.phage_iter
+        dt_cell = (1/4)*((self.length**2)/self.cell_diffusion)*self.cell_iter
+        if dt_phage < dt_cell:
+            self.time += dt_phage
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    self.matrix[i][j].execute_until(self.time)
+                    self.matrix[i][j].time = self.time
+            self.diffuse_phages()
+            self.phage_iter += 1
+        else:
+            self.time += dt_cell
+            for i in range(self.rows):
+                for j in range(self.cols):
+                    self.matrix[i][j].execute_until(self.time)
+                    self.matrix[i][j].time = self.time
+            self.diffuse_cells()
+            self.cell_iter += 1
 
     def diffuse_phages(self):
         for i in range(self.rows):
@@ -116,6 +139,28 @@ class Plate:
         if i2 < self.rows and j2 < self.cols and i2 >= 0 and j2 >= 0:
             self.matrix[i2][j2].phages += 1
             self.matrix[i][j].phages -= 1
+
+    def move_cell(self, i, j, i2, j2):
+        if i2 < self.rows and j2 < self.cols and i2 >= 0 and j2 >= 0:
+            if self.matrix[i2][j2].cells < 3:
+                self.matrix[i2][j2].cells += 1
+            self.matrix[i][j].replicated_cells -= 1
+
+    def diffuse_cells(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                for p in range(self.matrix[i][j].replicated_cells):
+                    direction = np.random.randint(5)
+                    if direction == 0:
+                        self.move_cell(i, j, i + 1, j)
+                    elif direction == 1:
+                        self.move_cell(i, j, i - 1, j)
+                    elif direction == 2:
+                        self.move_cell(i, j, i, j + 1)
+                    elif direction == 3:
+                        self.move_cell(i, j, i, j - 1)
+                    elif direction == 4:
+                        self.move_cell(i, j, i, j)
 
     def __str__(self):
         phages = ""
