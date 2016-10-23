@@ -1,6 +1,19 @@
 #! /usr/bin/env python3
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+'''
+Author: Benjamin R. Jack
+
+Simulates phage diffusing across a plate of bacteria, infection, bacterial
+replication, and lysis. This is an implementation of the
+gillespie-multi-particle (GMP) algorithm:
+
+doi: 10.1093/bioinformatics/btl271
+
+'''
 
 class Patch:
     """
@@ -270,6 +283,26 @@ class Plate:
                     elif direction == 4:
                         self.move_cell(i, j, i, j)
 
+    def make_matrix(self, type = 'phages'):
+        """
+        Generate a matrix of counts for a given type. Used for matplotlib
+        visualization.
+
+        Args:
+            type: Type of data that matrix should contain (phages or cells)
+
+        Return:
+            2D numpy array of counts corresponding to the input type
+        """
+        out = np.zeros((self.rows, self.cols))
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if type == 'phages':
+                    out[i][j] = self.matrix[i][j].phages
+                elif type == 'cells':
+                    out[i][j] = self.matrix[i][j].cells
+        return out
+
     def __str__(self):
         """
         Generate matrix of cell and phage counts for debugging and
@@ -291,10 +324,10 @@ def main():
     """
     Define a plate and iterate through simulation until a certain time point.
     """
-    my_plate = Plate(10, # rows
-                     10, # cols
+    my_plate = Plate(50, # rows
+                     50, # cols
                      1, # patch length/width
-                     0.1, # cell diffusion
+                     0.5, # cell diffusion
                      0.1, # phage diffusion
                      5, # goo particles
                      3, # max cell density
@@ -304,10 +337,34 @@ def main():
                      0.05, # phage-goo interaction rate constant
                      0.02 # replication rate constant
                      )
-    while (my_plate.time < 50):
-        my_plate.iterate()
 
-    print(my_plate)
+    out_list = [my_plate.make_matrix(type = 'phages')]
+
+    while (my_plate.time < 500):
+        my_plate.iterate()
+        out_list.append(my_plate.make_matrix(type = 'phages'))
+
+
+    # The following code produces a series of PNGs that can be stitched together
+    # to make a move/animated GIF.
+
+    # fig = plt.figure()
+    # pcm = plt.pcolormesh(out_list[0])
+    # plt.axis('off')
+    # plt.axes().set_aspect('equal')
+    # plt.axes().get_xaxis().set_visible(False)
+    # plt.axes().get_yaxis().set_visible(False)
+    # plt.draw()
+    #
+    # def step(i):
+    #     if i > len(out_list): return
+    #     pcm.set_array(out_list[i].ravel())
+    #     plt.draw()
+    #     fig.savefig("./frames/" + str(i) + ".png", bbox_inches = 'tight',
+    #                 pad_inches = 0)
+    #
+    # for i in range(len(out_list)):
+    #     step(i)
 
 if __name__ == "__main__":
     main()
