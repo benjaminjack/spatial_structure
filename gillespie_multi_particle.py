@@ -190,12 +190,12 @@ class Plate:
         Execute a diffusion event.
         """
         # Determine which should diffuse first: phages or cells
-        dt_phage = (1/4)*((self.length**2)/self.phage_diffusion)*self.phage_iter
-        dt_cell = (1/4)*((self.length**2)/self.cell_diffusion)*self.cell_iter
-        if dt_phage < dt_cell:
+        t_phage = (1/4)*((self.length**2)/self.phage_diffusion)*self.phage_iter
+        t_cell = (1/4)*((self.length**2)/self.cell_diffusion)*self.cell_iter
+        if t_phage < t_cell:
             # Phages diffuse first...
             # Update system time
-            self.time += dt_phage
+            self.time = t_phage
             # Iterate over all patches and execute reactions until the time to
             # the next diffusion event.
             for i in range(self.rows):
@@ -207,7 +207,7 @@ class Plate:
             self.phage_iter += 1
         else:
             # Cells diffuse first
-            self.time += dt_cell
+            self.time = t_cell
             for i in range(self.rows):
                 for j in range(self.cols):
                     self.matrix[i][j].execute_until(self.time)
@@ -324,25 +324,30 @@ def main():
     """
     Define a plate and iterate through simulation until a certain time point.
     """
-    my_plate = Plate(50, # rows
-                     50, # cols
+    my_plate = Plate(10, # rows
+                     10, # cols
                      1, # patch length/width
-                     0.5, # cell diffusion
-                     0.1, # phage diffusion
+                     1, # cell diffusion
+                     6, # phage diffusion
                      5, # goo particles
                      3, # max cell density
                      40, # burst size
-                     0.3, # infection rate constant
-                     0.01, # lysis rate constant
-                     0.05, # phage-goo interaction rate constant
-                     0.02 # replication rate constant
+                     9.9 * 10**-9, # infection rate constant
+                     0.1, # lysis rate constant
+                     9.9 * 10**-9, # phage-goo interaction rate constant
+                     0.03 # replication rate constant
                      )
 
     out_list = [my_plate.make_matrix(type = 'phages')]
 
+    print(my_plate)
+
+
+    counter = 0
     while (my_plate.time < 500):
         my_plate.iterate()
-        out_list.append(my_plate.make_matrix(type = 'phages'))
+        counter += 1
+        # out_list.append(my_plate.make_matrix(type = 'phages'))
 
 
     # The following code produces a series of PNGs that can be stitched together
@@ -365,6 +370,9 @@ def main():
     #
     # for i in range(len(out_list)):
     #     step(i)
+    print(counter)
+    print(my_plate.time)
+    print(my_plate)
 
 if __name__ == "__main__":
     main()

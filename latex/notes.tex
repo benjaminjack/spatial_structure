@@ -1,0 +1,48 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+
+\title{Spatially structured models of phage infection}
+\date{10-28-2016}
+\author{Benjamin R. Jack}
+
+\begin{document}
+\maketitle
+
+\section{Gillespie-multi-particle model}
+The Gillespie-multi-particle model (GMP) is a particle-based spatial stochastic simulation algorithm. Let $M$ be a 2D lattice of dimensions $L \times L$ patches. Each patch within the lattice has dimensions $\lambda \times \lambda$. A patch can contain healthy cells, infected cells, newly-replicated cells, phage particles, and goo (EPS) particles. Phage particles diffuse freely across patches. Newly-replicated cells diffuse exactly once to a patch in the Von Nuemann neighborhood. The GMP algorithm alternates between the execution of reaction and diffusion processes, where diffussion occurs at predetermined intervals of time. For each diffusing species $S$, the time at which a diffusion event will occur is given by
+\begin{equation}
+t_{S} = n_{S}\tau_{D_S} \\,
+\end{equation}
+where $n_S$ is the iteration number and $\tau_{D_S}$ is given by
+\begin{equation}
+\tau_{D_S} = \frac{\lambda^{2}}{4D_S}
+\end{equation}
+according to a Weiner process or random walk in two dimensions, with a diffusion constant $D_S$.
+
+Each diffusion event is executed locally at every patch. When a diffusion event occurs, each particle of species $S$ is randomly distributed with equal probability among all patches in the Von Neumann neighborhood. Newly-replicated cells only undergo one diffusion event and then immediately convert to healthy cells, which do not diffuse.
+
+The GMP algorithm proceeds as follows:
+
+In between each diffussion event, reactions proceed indepdendently in each patch according to the Gillespie SSA, where $\mu$ is the next reaction to occur in a given patch, and $\tau_R$ is the time until that reaction occurs.
+
+\subsection{Reactions in the Gillespie SSA}
+Each patch, indepdent of the other patches, will execute the following reactions until the next diffusion event:
+
+\begin{enumerate}
+    \item Convert cells to newly-replicated cells, a first order reaction.
+    \item Convert phage and cells to infected cells, a second order reaction.
+    \item Convert phage and goo to just goo (i.e. kill phage), a second order reaction.
+    \item Convert infected cells to new phage particles (i.e. lyse cell), a first order reaction.
+\end{enumerate}
+
+Cell replication and cell lysis after infection are modeled as reactions that occur probabilisitically with a given propensity. These two events do not occur at fixed intervals. Therefore, cell replication times and lysis times are represented as reaction rate constants. Under the Gillespsie SSA, these reaction times are assumed to follow an exponential distribution. This exponential distribution may not accurately reflect lysis and replication events.
+
+Conversely, when the number of particles in a patch is small (i.e. there may only be a few cells per patch), a Gillepsie SSA may more accurately capture the stochasticity of infection. The Gillespie SSA framework also makes it trivial to add more reactions (e.g. phage attachment/detachment).
+
+
+\section{Heilmann model}
+
+Hello world!
+
+\end{document}
