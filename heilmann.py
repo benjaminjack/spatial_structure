@@ -8,8 +8,8 @@ lysis_time = 10
 k_degradation = 10**-2 # delta
 k_infection = 10**-3 # alpha
 
-rows = 10
-cols = 10
+rows = 50
+cols = 50
 
 phage = np.random.choice([0,100], p = [0.9, 0.1], size=(rows, cols))
 cells = np.random.choice([0,1], p = [0.9, 0.1], size=(rows, cols))
@@ -45,15 +45,15 @@ def iterate(time):
             # print(dead_phage)
             phage[i][j] -= dead_phage
             to_diffuse = np.random.binomial(phage[i][j], p_decay)
-            directions = np.random.multinomial(to_diffuse, [1/4]*4, size = 1)
+            directions = np.random.multinomial(to_diffuse, [1/4]*4)
             if i + 1 < rows and i - 1 >= 0:
-                phage[i+1][j] += directions[0][0]
-                phage[i-1][j] += directions[0][1]
-                phage[i][j] -= (directions[0][0] + directions[0][1])
+                phage[i+1][j] += directions[0]
+                phage[i-1][j] += directions[1]
+                phage[i][j] -= (directions[0] + directions[1])
             if j + 1 < cols and (j - 1) >= 0:
-                phage[i][j+1] += directions[0][2]
-                phage[i][j-1] += directions[0][3]
-                phage[i][j] -= (directions[0][2] + directions[0][3])
+                phage[i][j+1] += directions[2]
+                phage[i][j-1] += directions[3]
+                phage[i][j] -= (directions[2] + directions[3])
 
 
 while time < 1000:
