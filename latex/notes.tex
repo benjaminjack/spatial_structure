@@ -3,14 +3,14 @@
 \usepackage{amsmath}
 
 \title{Spatially structured models of phage infection}
-\date{10-28-2016}
+\date{\today}
 \author{Benjamin R. Jack}
 
 \begin{document}
 \maketitle
 
 \section{Gillespie-multi-particle model}
-The Gillespie-multi-particle model (GMP) is a particle-based spatial stochastic simulation algorithm. Let $M$ be a 2D lattice of dimensions $L \times L$ patches. Each patch within the lattice has dimensions $\lambda \times \lambda$. A patch can contain healthy cells, infected cells, newly-replicated cells, phage particles, and goo (EPS) particles. Phage particles diffuse freely across patches. Newly-replicated cells diffuse exactly once to a patch in the Von Nuemann neighborhood. The GMP algorithm alternates between the execution of reaction and diffusion processes, where diffussion occurs at predetermined intervals of time. For each diffusing species $S$, the time at which a diffusion event will occur is given by
+The Gillespie-multi-particle model (GMP) \cite{gmp} is a particle-based spatial stochastic simulation algorithm. Let $M$ be a 2D lattice of dimensions $L \times L$ patches. Each patch within the lattice has dimensions $\lambda \times \lambda$. Each patch can contain multiple healthy cells, infected cells, newly-replicated cells, phage particles, and goo (EPS) particles. Phage particles diffuse freely across patches. Newly-replicated cells diffuse exactly once to a patch in the Von Nuemann neighborhood. The GMP algorithm alternates between the execution of reaction and diffusion processes, where diffussion occurs at predetermined intervals of time. For each diffusing species $S$, the time at which a diffusion event will occur is given by
 \begin{equation}
 t_{S} = n_{S}\tau_{D_S} \\,
 \end{equation}
@@ -24,25 +24,66 @@ Each diffusion event is executed locally at every patch. When a diffusion event 
 
 The GMP algorithm proceeds as follows:
 
+\begin{enumerate}
+    \item Initialize $t_s = \text{min}\{\tau_{D_S}\}$ for all species $S$, set $t_\text{sim}=0$ and $n_S=1$ for all $S$.
+    \item While $t_\text{sim} < t_\text{S}$, execute reactions according to Gillespie SSA at every patch in grid. Advance $t_\text{sim} = t_\text{sim} + \tau_R$.
+    \item Diffuse species for which $t_S = t_\text{sim}$.
+    \item Increment iteration $n_S$ for diffused species
+    \item Set $t_S = \text{min}\{\tau_{D_S}n_S\}$.
+    \item Repeat steps 2--4 until $t_\text{sim} = t_\text{end}$.
+\end{enumerate}
+
 In between each diffussion event, reactions proceed indepdendently in each patch according to the Gillespie SSA, where $\mu$ is the next reaction to occur in a given patch, and $\tau_R$ is the time until that reaction occurs.
 
 \subsection{Reactions in the Gillespie SSA}
 Each patch, indepdent of the other patches, will execute the following reactions until the next diffusion event:
 
-\begin{enumerate}
+\begin{itemize}
     \item Convert cells to newly-replicated cells, a first order reaction.
     \item Convert phage and cells to infected cells, a second order reaction.
     \item Convert phage and goo to just goo (i.e. kill phage), a second order reaction.
     \item Convert infected cells to new phage particles (i.e. lyse cell), a first order reaction.
-\end{enumerate}
+\end{itemize}
 
+\subsection{Pros/cons}
 Cell replication and cell lysis after infection are modeled as reactions that occur probabilisitically with a given propensity. These two events do not occur at fixed intervals. Therefore, cell replication times and lysis times are represented as reaction rate constants. Under the Gillespsie SSA, these reaction times are assumed to follow an exponential distribution. This exponential distribution may not accurately reflect lysis and replication events.
 
-Conversely, when the number of particles in a patch is small (i.e. there may only be a few cells per patch), a Gillepsie SSA may more accurately capture the stochasticity of infection. The Gillespie SSA framework also makes it trivial to add more reactions (e.g. phage attachment/detachment).
+Conversely, when the number of particles in a patch is small (i.e. there may only be a few cells per patch), a Gillepsie SSA may more accurately capture the stochasticity of infection. The Gillespie SSA framework also makes it trivial to add more reactions (e.g. phage attachment/detachment). Additionally, each patch can contain multiple cells.
 
 
 \section{Heilmann model}
 
-Hello world!
+The Heilmann model \cite{heilmann} simulates phage infections and diffusion events over discrete, predetermined time steps. Again, assume a $L\times{L}$ grid of patches. Each patch can contain only \textit{one} cell (which may be healthy or infected) and any number of phage particles. [\textit{Note: Most of the following description is taken verbatim from the supplementary materials of \cite{heilmann}}]. Cells replicate and lyse after a fixed amount of time. At each time step, for each patch in the grid (the order of choosing patches is random), the following steps are executed:
+
+\begin{enumerate}
+    \item If the patch contains an infected bacterium and the current time matches the time of lysis stored in the lytic counter, then for the next time step, the site is labeled empty (given a value of -1), and the number of phage is increased by the burst size.
+    \item If the patch contains a healthy bacterium and the current time matches the replication counter, then for the next time step, an empty patch in the Von Neumann neighborhood is randomly (according to a uniform distribution) selected and a new cell is placed there. Replication timers for both the original and daughter cell are reset. An infected cell does not replicate. If the daughter cell has nowhere to move, it dies.
+    \item If the patch contains a healthy bacterium and a non-zero number of phage $N_0$, then in the next time step it becomes infected with a probability
+    \begin{equation}
+        p_\alpha = 1 - \text{exp}\left(-N_0\alpha\left(\frac{1-\text{exp}(-\delta\Delta{t})}{\delta}\right)\right)\,,
+    \end{equation}
+    where $\alpha$ is the rate of infection, $\delta$ is the rate of phage decay, and $\Delta{t}$ is the time step. The number of phage is decreased by 1, and the lytic counter is set.
+    \item Each phage in a patch decays with the probability of $p_\delta = 1 - e^{-\delta{t}}$.
+    \item Each phage in the patch jumps to a neighboring patch (chosen randomly from the Von Neumann neighborhood) with a probability of $p_\lambda = 1 - e^{-\lambda{t}}$.
+\end{enumerate}
+
+\subsection{Pros/cons}
+Each patch can only contain a single cell. Adding new reactions is not as simple as in the GMP model.
+
+This is model that was already previously used to study phage/bacteria spatial dynamics, whereas the GMP model has not been used for phage before (to my knowledge).
+
+\subsection{Performance}
+
+The model is implemented in Python (it could be further optimized or rewritten in C). The average runtime on my laptop for a 100$\times$100 grid for 1000 iterations (1000 minutes), using the default parameters, took 2min 34s.
+
+\begin{thebibliography}{1}
+
+\bibitem{gmp} J. Vidal Rodríguez, Jaap A. Kaandorp, Maciej Dobrzyński, and Joke G. Blom. Spatial stochastic modelling of the phosphoenolpyruvate-dependent phosphotransferase (PTS) pathway in Escherichia coli. Bioinformatics (2006) 22 (15): 1895-1901 first published online May 26, 2006, doi:10.1093/bioinformatics/btl271
+
+\bibitem{heilmann} Silja Heilmann, Kim Sneppen, and Sandeep Krishna.
+Coexistence of phage and bacteria on the boundary of self-organized refuges.
+PNAS 2012 109 (31) 12828-12833; published ahead of print July 17, 2012, doi:10.1073/pnas.1200771109
+
+\end{thebibliography}
 
 \end{document}
