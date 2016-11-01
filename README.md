@@ -10,6 +10,12 @@ The Python scripts were written for Python3. They both require NumPy, a module f
 pip3 install numpy
 ```
 
+For making heatmap animations, matplotlib is required. It can also be installed with `pip3`:
+
+```
+pip3 install matplotlib
+```
+
 ## Converting `matplotlib`-generated PNGs to an animated gif
 
 If you have a directory of numbered PNGs (e.g. 1.png, 2.png, 3.png, etc.), navigate to inside of that directory, and use the following ImageMagick command to convert the PNGs to an animated GIF:
