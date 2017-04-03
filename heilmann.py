@@ -34,6 +34,14 @@ p_diffuse = 1 - np.exp(-k_diffuse * delta_t)
 
 time = 0
 
+output = {
+    'burst_total': 0,
+    'replication_total': 0,
+    'eps_total': np.sum(eps),
+    'lost_to_debris_or_eps': 0,
+    'lost_to_primary_infection': 0,
+    'lost_to_secondary_infection': 0
+}
 
 def iterate(time):
     random_rows = list(range(0, rows))
@@ -53,6 +61,7 @@ def iterate(time):
                 cells[i][j] = 0
                 debris[i][j] = time + decay_time
                 replication[i][j] = -1
+                output['burst_total'] += 1
             if replication[i][j] == time:
                 # Replicate cells and diffuse randomly
                 possible_moves = []
@@ -74,6 +83,7 @@ def iterate(time):
                     replication[move[0]][move[1]] = time + replication_time
                 # Reset replication counter for original cell
                 replication[i][j] = time + replication_time
+                output['replication_total'] += 1
             # Calculate probability of infection and phage death
             if phage[i][j] > 0:
                 p_infect = 1 - np.exp(-cells[i][j] * k_infection)
@@ -87,14 +97,19 @@ def iterate(time):
                 )
                 if infect[0] > 0:
                     phage[i][j] -= infect[0]  # Lose phage
+                    output['lost_to_secondary_infection'] += (infect[0] - 1)
                     if lysis[i][j] == -1:
                         # Only primary infections reset lysis timer
                         lysis[i][j] = lysis_time + time
                         # Infected cells can't replicate
                         replication[i][j] = -1
+                        output['lost_to_primary_infection'] += 1
+                    else:
+                        output['lost_to_secondary_infection'] += 1
                 elif infect[1] > 0:
                     # Lose phage to EPS or debris
                     phage[i][j] -= infect[1]
+                    output['lost_to_debris_or_eps'] += infect[1]
 
             # Randomly diffuse phage
             # First calculate how many phage will diffuse
@@ -119,3 +134,5 @@ def iterate(time):
 while time < 1000:
     iterate(time)
     time += delta_t
+
+print(output)
