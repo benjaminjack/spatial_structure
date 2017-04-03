@@ -76,8 +76,6 @@ def iterate(time):
                 replication[i][j] = time + replication_time
             # Calculate probability of infection and phage death
             if phage[i][j] > 0:
-                # p_infect = 1 - np.exp(-phage[i][j] * k_infection *
-                #                      (p_decay/k_degradation))
                 p_infect = 1 - np.exp(-cells[i][j] * k_infection)
                 p_eps = 1 - np.exp(-eps[i][j] * k_eps)
                 p_debris = 1 - np.exp(-(debris[i][j] > 0) * k_infection)
@@ -97,8 +95,6 @@ def iterate(time):
                 elif infect[1] > 0:
                     # Lose phage to EPS or debris
                     phage[i][j] -= infect[1]
-                if cells[i][j] > 0:
-                    print(p_infect, p_eps, p_debris, infect)
 
             # Randomly diffuse phage
             # First calculate how many phage will diffuse
