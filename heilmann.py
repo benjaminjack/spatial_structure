@@ -5,7 +5,9 @@ k_diffuse = 10  # lambda
 burst_size = 80  # Beta
 replication_time = 300  # T, in time steps
 lysis_time = 10  # in time steps
-k_degradation = 10**-2  # delta
+decay_time = 10  # dead cell decay time in times steps, set to 0 for no decay
+# k_degradation = 10**-2  # delta
+k_eps = 10**-2  # rate that phage are lost to EPS
 k_infection = 10**-3  # alpha
 
 rows = 10
@@ -15,13 +17,17 @@ cols = 10
 phage = np.random.choice([0, 100], p=[0.9, 0.1], size=(rows, cols))
 # Grid of live cells
 cells = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
+# Grid of EPS
+eps = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
 # Grid of lysis timers (can also tell us where infected cells are)
 lysis = np.ones((rows, cols), dtype='int')*-1
 # Grid of replication timers
 replication = np.ones((rows, cols), dtype='int')*-1 + 101*cells
+# Grid of debris/dead cell timers
+debris = np.ones((rows, cols), dtype='int')*-1
 
 # Probability of phage particle decaying during given time step
-p_decay = 1 - np.exp(-k_degradation * delta_t)
+# p_decay = 1 - np.exp(-k_degradation * delta_t)
 # Probability of phage particle diffusing to neighboring patch during given
 # time step
 p_diffuse = 1 - np.exp(-k_diffuse * delta_t)
@@ -37,11 +43,15 @@ def iterate(time):
 
     for i in random_rows:
         for j in random_cols:
+            if debris[i][j] == time and decay_time > 0:
+                # Reset timers for decaying dead cells
+                debris[i][j] = -1
             if lysis[i][j] == time:
                 # Check if it's time for cell to lyse
-                lysis[i][j] == -1
+                lysis[i][j] = -1
                 phage[i][j] += burst_size
-                cells[i][j] == 0
+                cells[i][j] = 0
+                debris[i][j] = time + decay_time
                 replication[i][j] = -1
             if replication[i][j] == time:
                 # Replicate cells and diffuse randomly
@@ -64,21 +74,32 @@ def iterate(time):
                     replication[move[0]][move[1]] = time + replication_time
                 # Reset replication counter for original cell
                 replication[i][j] = time + replication_time
-            # Calculate probability of infection
-            if phage[i][j] > 0 and cells[i][j] > 0:
-                p_infect = 1 - np.exp(-phage[i][j] * k_infection *
-                                      (p_decay/k_degradation))
-                infect = np.random.choice([0, 1], p=[1 - p_infect, p_infect])
-                if infect == 1:
-                    phage[i][j] -= 1  # Lose one phage to infected cell
+            # Calculate probability of infection and phage death
+            if phage[i][j] > 0:
+                # p_infect = 1 - np.exp(-phage[i][j] * k_infection *
+                #                      (p_decay/k_degradation))
+                p_infect = 1 - np.exp(-cells[i][j] * k_infection)
+                p_eps = 1 - np.exp(-eps[i][j] * k_eps)
+                p_debris = 1 - np.exp(-(debris[i][j] > 0) * k_infection)
+                infect = np.random.multinomial(
+                    phage[i][j],
+                    [p_infect,
+                     p_eps + p_debris,
+                     1 - p_infect - p_eps - p_debris]
+                )
+                if infect[0] > 0:
+                    phage[i][j] -= infect[0]  # Lose phage
                     if lysis[i][j] == -1:
                         # Only primary infections reset lysis timer
-                        lysis[i][j] = infect * lysis_time + time
+                        lysis[i][j] = lysis_time + time
                         # Infected cells can't replicate
                         replication[i][j] = -1
-            # Calculate probability that phage will die
-            dead_phage = np.random.binomial(phage[i][j], p_decay)
-            phage[i][j] -= dead_phage
+                elif infect[1] > 0:
+                    # Lose phage to EPS or debris
+                    phage[i][j] -= infect[1]
+                if cells[i][j] > 0:
+                    print(p_infect, p_eps, p_debris, infect)
+
             # Randomly diffuse phage
             # First calculate how many phage will diffuse
             to_diffuse = np.random.binomial(phage[i][j], p_diffuse)
@@ -96,6 +117,7 @@ def iterate(time):
             if (j - 1) >= 0:
                 phage[i][j-1] += directions[3]
                 phage[i][j] -= directions[3]
+
 
 # Iterate simulation for 1000 minutes (delta_t = 1 min)
 while time < 1000:
