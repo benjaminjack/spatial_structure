@@ -1,22 +1,22 @@
 import numpy as np
 
 delta_t = 1  # time step in minutes
-k_diffuse = 10  # lambda
-burst_size = 80  # Beta
-replication_time = 300  # T, in time steps
-lysis_time = 10  # in time steps
-decay_time = 10  # dead cell decay time in times steps, set to 0 for no decay
+k_diffuse = 2.5  # lambda
+burst_size = 10  # Beta
+replication_time = 100  # T, in time steps
+lysis_time = 20  # in time steps
+decay_time = 2  # dead cell decay time in times steps, set to 0 for no decay
 # k_degradation = 10**-2  # delta
-k_eps = 10**-2  # rate that phage are lost to EPS
-k_infection = 10**-3  # alpha
+k_eps = 0.35/100  # rate that phage are lost to EPS
+k_infection = 0.25/100  # alpha
 
 rows = 10
 cols = 10
 
 # Grid of phage
-phage = np.random.choice([0, 100], p=[0.9, 0.1], size=(rows, cols))
+phage = np.random.choice([0, 1], p=[0.7, 0.3], size=(rows, cols))
 # Grid of live cells
-cells = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
+cells = np.random.choice([0, 1], p=[0.7, 0.3], size=(rows, cols))
 # Grid of EPS
 eps = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
 # Grid of lysis timers (can also tell us where infected cells are)
@@ -33,6 +33,7 @@ debris = np.ones((rows, cols), dtype='int')*-1
 p_diffuse = 1 - np.exp(-k_diffuse * delta_t)
 
 time = 0
+burn_in = 0
 
 output = {
     'burst_total': 0,
@@ -42,6 +43,7 @@ output = {
     'lost_to_primary_infection': 0,
     'lost_to_secondary_infection': 0
 }
+
 
 def iterate(time):
     random_rows = list(range(0, rows))
@@ -59,9 +61,11 @@ def iterate(time):
                 lysis[i][j] = -1
                 phage[i][j] += burst_size
                 cells[i][j] = 0
-                debris[i][j] = time + decay_time
+                if decay_time > 0:
+                    debris[i][j] = time + decay_time
                 replication[i][j] = -1
-                output['burst_total'] += 1
+                if time > burn_in:
+                    output['burst_total'] += 1
             if replication[i][j] == time:
                 # Replicate cells and diffuse randomly
                 possible_moves = []
@@ -83,7 +87,8 @@ def iterate(time):
                     replication[move[0]][move[1]] = time + replication_time
                 # Reset replication counter for original cell
                 replication[i][j] = time + replication_time
-                output['replication_total'] += 1
+                if time > burn_in:
+                    output['replication_total'] += 1
             # Calculate probability of infection and phage death
             if phage[i][j] > 0:
                 p_infect = 1 - np.exp(-cells[i][j] * k_infection)
@@ -97,19 +102,23 @@ def iterate(time):
                 )
                 if infect[0] > 0:
                     phage[i][j] -= infect[0]  # Lose phage
-                    output['lost_to_secondary_infection'] += (infect[0] - 1)
+                    if time > burn_in:
+                        output['lost_to_secondary_infection'] += (infect[0] - 1)
                     if lysis[i][j] == -1:
                         # Only primary infections reset lysis timer
                         lysis[i][j] = lysis_time + time
                         # Infected cells can't replicate
                         replication[i][j] = -1
-                        output['lost_to_primary_infection'] += 1
+                        if time > burn_in:
+                            output['lost_to_primary_infection'] += 1
                     else:
-                        output['lost_to_secondary_infection'] += 1
+                        if time > burn_in:
+                            output['lost_to_secondary_infection'] += 1
                 elif infect[1] > 0:
                     # Lose phage to EPS or debris
                     phage[i][j] -= infect[1]
-                    output['lost_to_debris_or_eps'] += infect[1]
+                    if time > burn_in:
+                        output['lost_to_debris_or_eps'] += infect[1]
 
             # Randomly diffuse phage
             # First calculate how many phage will diffuse
@@ -131,7 +140,7 @@ def iterate(time):
 
 
 # Iterate simulation for 1000 minutes (delta_t = 1 min)
-while time < 1000:
+while time < 10000:
     iterate(time)
     time += delta_t
 
