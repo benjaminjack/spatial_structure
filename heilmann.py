@@ -1,20 +1,20 @@
 import numpy as np
 
-delta_t = 1 # time step in minutes
-k_diffuse = 10 # lambda
-burst_size = 80 # Beta
-replication_time = 300 # T, in time steps
-lysis_time = 10 # in time steps
-k_degradation = 10**-2 # delta
-k_infection = 10**-3 # alpha
+delta_t = 1  # time step in minutes
+k_diffuse = 10  # lambda
+burst_size = 80  # Beta
+replication_time = 300  # T, in time steps
+lysis_time = 10  # in time steps
+k_degradation = 10**-2  # delta
+k_infection = 10**-3  # alpha
 
 rows = 10
 cols = 10
 
 # Grid of phage
-phage = np.random.choice([0,100], p = [0.9, 0.1], size=(rows, cols))
+phage = np.random.choice([0, 100], p=[0.9, 0.1], size=(rows, cols))
 # Grid of live cells
-cells = np.random.choice([0,1], p = [0.9, 0.1], size=(rows, cols))
+cells = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
 # Grid of lysis timers (can also tell us where infected cells are)
 lysis = np.ones((rows, cols), dtype='int')*-1
 # Grid of replication timers
@@ -27,6 +27,7 @@ p_decay = 1 - np.exp(-k_degradation * delta_t)
 p_diffuse = 1 - np.exp(-k_diffuse * delta_t)
 
 time = 0
+
 
 def iterate(time):
     random_rows = list(range(0, rows))
@@ -48,7 +49,7 @@ def iterate(time):
                 # Construct a list of possible moves
                 if (i+1) < rows and cells[i+1][j] == 0:
                     possible_moves.append((i+1, j))
-                if (i-1) >=0 and cells[i-1][j] == 0:
+                if (i-1) >= 0 and cells[i-1][j] == 0:
                     possible_moves.append((i-1, j))
                 if (j+1) < cols and cells[i][j+1] == 0:
                     possible_moves.append((i, j+1))
@@ -64,14 +65,17 @@ def iterate(time):
                 # Reset replication counter for original cell
                 replication[i][j] = time + replication_time
             # Calculate probability of infection
-            if phage[i][j] > 0 and cells[i][j] > 0 and lysis[i][j] == -1:
-                p_infect = 1 - np.exp(-phage[i][j] * k_infection * \
-                                     (p_decay/k_degradation))
-                infect = np.random.choice([0,1], p = [1 - p_infect, p_infect])
+            if phage[i][j] > 0 and cells[i][j] > 0:
+                p_infect = 1 - np.exp(-phage[i][j] * k_infection *
+                                      (p_decay/k_degradation))
+                infect = np.random.choice([0, 1], p=[1 - p_infect, p_infect])
                 if infect == 1:
-                    lysis[i][j] = infect * lysis_time + time
-                    # Infected cells can't replicate
-                    replication[i][j] = -1
+                    phage[i][j] -= 1  # Lose one phage to infected cell
+                    if lysis[i][j] == -1:
+                        # Only primary infections reset lysis timer
+                        lysis[i][j] = infect * lysis_time + time
+                        # Infected cells can't replicate
+                        replication[i][j] = -1
             # Calculate probability that phage will die
             dead_phage = np.random.binomial(phage[i][j], p_decay)
             phage[i][j] -= dead_phage
