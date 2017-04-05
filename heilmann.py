@@ -2,7 +2,7 @@ import numpy as np
 
 delta_t = 1  # time step in minutes
 k_diffuse = 2.5  # lambda
-burst_size = 20  # Beta
+burst_size = 2  # Beta
 # replication_time = 100  # T, in time steps
 k_replicate = 0.01
 lysis_time = 20  # in time steps
@@ -11,8 +11,8 @@ decay_time = 0  # dead cell decay time in times steps, set to 0 for no decay
 k_eps = 0.35/100  # rate that phage are lost to EPS
 k_infection = 0.25/100  # alpha
 
-rows = 50
-cols = 50
+rows = 20
+cols = 20
 
 p_eps = 0.35
 p_infect = 0.25
@@ -22,10 +22,11 @@ p_diffuse = 0.025
 
 # Grid of phage
 phage = np.random.choice([0, burst_size], p=[0.7, 0.3], size=(rows, cols))
+print(phage)
 # Grid of live cells
 cells = np.random.choice([0, 1], p=[0.7, 0.3], size=(rows, cols))
 # Grid of EPS
-eps = np.random.choice([0, 1], p=[0.7, 0.3], size=(rows, cols))
+eps = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
 # Grid of lysis timers (can also tell us where infected cells are)
 lysis = np.ones((rows, cols), dtype='int')*-1
 # Grid of replication timers
@@ -40,7 +41,7 @@ debris = np.ones((rows, cols), dtype='int')*-1
 # p_diffuse = 1 - np.exp(-k_diffuse * delta_t)
 
 time = 0
-burn_in = 4000
+burn_in = 7000
 
 output = {
     'burst_total': 0,
@@ -48,7 +49,8 @@ output = {
     'eps_total': np.sum(eps),
     'lost_to_debris_or_eps': 0,
     'lost_to_primary_infection': 0,
-    'lost_to_secondary_infection': 0
+    'lost_to_secondary_infection': 0,
+    'alphab': 0
 }
 
 
@@ -100,6 +102,14 @@ def iterate(time):
                         possible_moves.append((i, right))
                     if cells[i][j-1] == 0:
                         possible_moves.append((i, j-1))
+                    if cells[i-1][j-1] == 0:
+                        possible_moves.append((i-1, j-1))
+                    if cells[down][right] == 0:
+                        possible_moves.append((down, right))
+                    if cells[down][i-1] == 0:
+                        possible_moves.append((down, i-1))
+                    if cells[j-1][right] == 0:
+                        possible_moves.append((j-1, right))
                     if len(possible_moves) > 0:
                         # Randomly select from list of possible moves
                         move_index = np.random.choice(len(possible_moves))
@@ -127,18 +137,18 @@ def iterate(time):
                 )
                 if infect[0] > 0:
                     phage[i][j] -= infect[0]  # Lose phage
-                    if time > burn_in:
-                        output['lost_to_secondary_infection'] += (infect[0] - 1)
+                    # if time > burn_in:
+                    #     output['lost_to_secondary_infection'] += (infect[0] - 1)
                     if lysis[i][j] == -1:
                         # Only primary infections reset lysis timer
                         lysis[i][j] = lysis_time + time
                         # Infected cells can't replicate
                         # replication[i][j] = -1
                         if time > burn_in:
-                            output['lost_to_primary_infection'] += 1
+                            output['lost_to_primary_infection'] += infect[0]
                     else:
                         if time > burn_in:
-                            output['lost_to_secondary_infection'] += 1
+                            output['lost_to_secondary_infection'] += infect[0]
                 elif infect[1] > 0:
                     # Lose phage to EPS or debris
                     phage[i][j] -= infect[1]
@@ -174,14 +184,18 @@ def iterate(time):
 
 
 # Iterate simulation for 1000 minutes (delta_t = 1 min)
-while time < 5000:
-    if time % 100 == 0:
+while time < 10000:
+    if time % 1000 == 0:
         print(time)
     iterate(time)
     time += delta_t
-output['infected_cells'] = np.sum(lysis > 0)
-output['uninfect_cells'] = np.sum(cells)
+    if time > burn_in:
+        output['alphab'] += (burst_size*(np.sum(cells)-np.sum(lysis > 0))*p_infect)/(p_infect*(np.sum(cells) + np.sum(debris > 0)) + p_eps*output["eps_total"])
 
-output['alphab'] = (burst_size*np.sum(cells)*p_infect)/(p_infect*(np.sum(cells) + np.sum(lysis > 0)) + p_eps*np.sum(eps))
+output['phage_final'] = np.sum(phage)
+output['total_cells_final'] = np.sum(cells)
+output['alphab_avg'] = output['alphab']/3000
+
+
 
 print(output)
