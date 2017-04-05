@@ -2,11 +2,11 @@ import numpy as np
 
 delta_t = 1  # time step in minutes
 k_diffuse = 2.5  # lambda
-burst_size = 2  # Beta
+burst_size = 20  # Beta
 # replication_time = 100  # T, in time steps
 k_replicate = 0.01
 lysis_time = 20  # in time steps
-decay_time = 0  # dead cell decay time in times steps, set to 0 for no decay
+decay_time = 2  # dead cell decay time in times steps, set to 0 for no decay
 # k_degradation = 10**-2  # delta
 k_eps = 0.35/100  # rate that phage are lost to EPS
 k_infection = 0.25/100  # alpha
@@ -19,14 +19,26 @@ p_infect = 0.25
 p_debris = 0.25
 p_replicate = 0.01
 p_diffuse = 0.025
+random_eps = True
 
 # Grid of phage
-phage = np.random.choice([0, burst_size], p=[0.7, 0.3], size=(rows, cols))
+phage = np.random.choice([burst_size]*int(0.3*rows*cols)+[0]*int(0.7*rows*cols),
+                         replace=False, size=(rows, cols))
 print(phage)
 # Grid of live cells
-cells = np.random.choice([0, 1], p=[0.7, 0.3], size=(rows, cols))
+cells = np.random.choice([1]*int(0.3*rows*cols)+[0]*int(0.7*rows*cols),
+                         replace=False, size=(rows, cols))
 # Grid of EPS
-eps = np.random.choice([0, 1], p=[0.9, 0.1], size=(rows, cols))
+if not random_eps:
+    eps = np.zeros((rows, cols))
+    max_eps = int(rows * cols * 0.6)
+    for i in range(0, rows):
+        for j in range(0, cols):
+            if np.sum(eps) < max_eps:
+                eps[i][j] = 1
+else:
+    eps = np.random.choice([1]*int(0.6*rows*cols)+[0]*int(0.4*rows*cols),
+                     replace=False, size=(rows, cols))
 # Grid of lysis timers (can also tell us where infected cells are)
 lysis = np.ones((rows, cols), dtype='int')*-1
 # Grid of replication timers
