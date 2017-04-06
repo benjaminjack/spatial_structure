@@ -179,7 +179,7 @@ def iterate(time,
         output['alphab'] += (burst_size * p_infect * healthy_cells) / \
             ((p_infect*total_cells) + p_eps * output["eps_total"])
 
-        temp = (np.where(cells > 0, cells, 1) + np.where(eps > 0, eps, 1) + np.where(lysis < 0, lysis, 1))
+        temp = (np.where(cells > 0, 1, 0) + np.where(eps > 0, 1, 0) + np.where(lysis < 0, 1, 0))
         output['cells_with_eps'] += np.sum(temp == 3)/healthy_cells
         try:
             output['phage_with_eps'] += temp_phage_with_eps/np.sum(phage)
