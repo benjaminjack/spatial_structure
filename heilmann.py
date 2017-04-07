@@ -74,22 +74,28 @@ def iterate(time,
                     else:
                         right = 0
                     # Daughter cell can move into one of 8 surrounding cells
+                    empty = False
                     if cells[down][j] == 0:
                         possible_moves.append((down, j))
+                        empty = True
                     if cells[i-1][j] == 0:
                         possible_moves.append((i-1, j))
+                        empty = True
                     if cells[i][right] == 0:
                         possible_moves.append((i, right))
+                        empty = True
                     if cells[i][j-1] == 0:
                         possible_moves.append((i, j-1))
-                    if cells[i-1][j-1] == 0:
-                        possible_moves.append((i-1, j-1))
-                    if cells[down][right] == 0:
-                        possible_moves.append((down, right))
-                    if cells[down][i-1] == 0:
-                        possible_moves.append((down, i-1))
-                    if cells[j-1][right] == 0:
-                        possible_moves.append((j-1, right))
+                        empty = True
+                    if empty is False:
+                        if cells[i-1][j-1] == 0:
+                            possible_moves.append((i-1, j-1))
+                        if cells[down][right] == 0:
+                            possible_moves.append((down, right))
+                        if cells[down][i-1] == 0:
+                            possible_moves.append((down, i-1))
+                        if cells[j-1][right] == 0:
+                            possible_moves.append((j-1, right))
                     if len(possible_moves) > 0:
                         # Randomly select from list of possible moves
                         move_index = np.random.choice(len(possible_moves))
@@ -123,8 +129,8 @@ def iterate(time,
                         if time > burn_in:
                             output['lost_to_primary_infection'] += infect[0]
                             if eps[i][j] > 0:
-                                temp_infection_with_eps += 1
-                            temp_infection_total += 1
+                                temp_infection_with_eps += infect[0]
+                            temp_infection_total += infect[0]
                     else:
                         # This cell is already infected
                         if time > burn_in:
@@ -174,16 +180,25 @@ def iterate(time,
 
     # Calculate and record alpha-b values and other info
     if time > burn_in:
-        healthy_cells = np.sum(cells) - np.sum(lysis > 0)
+        healthy_cells = np.sum(cells) - np.sum(np.where(lysis > 0, 1, 0))
         total_cells = np.sum(cells) + np.sum(debris > 0)
         output['alphab'] += (burst_size * p_infect * healthy_cells) / \
             ((p_infect*total_cells) + p_eps * output["eps_total"])
 
         temp = (np.where(cells > 0, 1, 0) + np.where(eps > 0, 1, 0) + np.where(lysis < 0, 1, 0))
-        output['cells_with_eps'] += np.sum(temp == 3)/healthy_cells
+        # output['cells_with_eps'] += np.sum(temp == 3)/healthy_cells
+
+        # temp = (np.where(eps > 0, 1, 0) + np.where(lysis > 0, 1, 0))
+        # infected_cells = np.sum(np.where(lysis < 0, 1, 0))
+
         try:
             output['phage_with_eps'] += temp_phage_with_eps/np.sum(phage)
-            output['infection_with_eps'] += temp_infection_with_eps/temp_infection_total
+            # output['infection_with_eps'] += temp_infection_with_eps/temp_infection_total
+            output['infection_with_eps'] += temp_infection_with_eps
+            output['infection_total'] += temp_infection_total
+            output['healthy_cell_total'] += healthy_cells
+            output['healthy_cell_eps'] += np.sum(temp == 3)
+            # output['infection_with_eps'] += np.sum(temp == 2)/infected_cells
         except:
             pass
 
@@ -208,8 +223,8 @@ def run_simulation(eps,
 
         random_eps = random_eps,
 
-        rows = 20,
-        cols = 20,
+        rows = 30,
+        cols = 30,
 
         fill_phage = 0.3,  # proportion of phage at initialization
         fill_cells = 0.3,  # proportion of cells at initialization
@@ -267,7 +282,10 @@ def run_simulation(eps,
         'alphab': 0,
         'cells_with_eps': 0,
         'phage_with_eps': 0,
-        'infection_with_eps': 0
+        'infection_with_eps': 0,
+        'infection_total': 0,
+        'healthy_cell_total': 0,
+        'healthy_cell_eps': 0
     }
 
     time = 0
@@ -281,9 +299,11 @@ def run_simulation(eps,
         params['output']['total_cells_final'] = np.sum(params['cells'])
         params['output']['alphab_avg'] = params['output']['alphab'] / \
                                          (sim_time - burn_in)
-        params['output']['cells_with_eps'] = params['output']['cells_with_eps'] / (sim_time - burn_in)
+        # params['output']['cells_with_eps'] = params['output']['cells_with_eps'] / (sim_time - burn_in)
+        params['output']['cells_with_eps'] = params['output']['healthy_cell_eps'] / params['output']['healthy_cell_total']
         params['output']['phage_with_eps'] = params['output']['phage_with_eps'] / (sim_time - burn_in)
-        params['output']['infection_with_eps'] = params['output']['infection_with_eps'] / (sim_time - burn_in)
+        # params['output']['infection_with_eps'] = params['output']['infection_with_eps'] / (sim_time - burn_in)
+        params['output']['infection_with_eps'] = params['output']['infection_with_eps'] / params['output']['infection_total']
         params['output']['p2c'] = params['output']['lost_to_primary_infection'] / \
             params['output']['burst_total']
         params['output']['p2ic'] = params['output']['lost_to_secondary_infection']/\
