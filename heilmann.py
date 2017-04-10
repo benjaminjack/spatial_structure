@@ -87,15 +87,15 @@ def iterate(time,
                     if cells[i][j-1] == 0:
                         possible_moves.append((i, j-1))
                         empty = True
-                    if empty is False:
-                        if cells[i-1][j-1] == 0:
-                            possible_moves.append((i-1, j-1))
-                        if cells[down][right] == 0:
-                            possible_moves.append((down, right))
-                        if cells[down][i-1] == 0:
-                            possible_moves.append((down, i-1))
-                        if cells[j-1][right] == 0:
-                            possible_moves.append((j-1, right))
+                    # if empty is False:
+                    #     if cells[i-1][j-1] == 0:
+                    #         possible_moves.append((i-1, j-1))
+                    #     if cells[down][right] == 0:
+                    #         possible_moves.append((down, right))
+                    #     if cells[down][i-1] == 0:
+                    #         possible_moves.append((down, i-1))
+                    #     if cells[j-1][right] == 0:
+                    #         possible_moves.append((j-1, right))
                     if len(possible_moves) > 0:
                         # Randomly select from list of possible moves
                         move_index = np.random.choice(len(possible_moves))
@@ -223,8 +223,8 @@ def run_simulation(eps,
 
         random_eps = random_eps,
 
-        rows = 30,
-        cols = 30,
+        rows = 20,
+        cols = 20,
 
         fill_phage = 0.3,  # proportion of phage at initialization
         fill_cells = 0.3,  # proportion of cells at initialization
@@ -270,6 +270,7 @@ def run_simulation(eps,
                                          [0]*eps_empties_init,
                                          replace=False,
                                          size=(params['rows'], params['cols']))
+    print(params['eps'])
 
     params['output'] = {
         'burst_total': 0,
@@ -321,6 +322,8 @@ def run_simulation(eps,
         params['output']['p2ic'] = 0
         params['output']['p2eps'] = 0
         params['output']['p2debris'] = 0
+    print(params['phage'])
+    print(params['cells'])
     return params['output']
 
 
@@ -329,12 +332,14 @@ def main():
     eps_list = [0.1, 0.3, 0.6, 0.9]
     print("EPS\tburst\talpha-b\tp->c\tp->ic\tp->eps\tC:E/C\tP:E/P\tI:E/I")
     # output = run_simulation(0.1, 2)
-    for burst in burst_sizes:
-        for eps in eps_list:
-            for i in range(3):
-                output = run_simulation(eps, burst)
-                print("{:}\t{:}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}".format(eps, burst, output['alphab_avg'], output['p2c'], output['p2ic'], output['p2eps'], output['cells_with_eps'], output['phage_with_eps'], output['infection_with_eps']))
-                sys.stdout.flush()
+    # for burst in burst_sizes:
+    #     for eps in eps_list:
+    #         for i in range(3):
+    eps = 0.9
+    burst = 20
+    output = run_simulation(eps=0.9, burst=40, random_eps=True)
+    print("{:}\t{:}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}\t{:0.2f}".format(eps, burst, output['alphab_avg'], output['p2c'], output['p2ic'], output['p2eps'], output['cells_with_eps'], output['phage_with_eps'], output['infection_with_eps']))
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":
